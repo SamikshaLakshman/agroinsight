@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* --- Color system: grounded in soil, field, and harvest --- */
+  --color-paper: #F7F5EF;       /* light mode background - dried husk */
+  --color-paper-raised: #FFFFFF;
+  --color-ink: #1F2A1F;         /* dark mode background / light mode text - deep soil */
+  --color-ink-raised: #29362A;
+
+  --color-sage: #5B7553;        /* primary actions, links */
+  --color-sage-light: #7B9870;
+  --color-sage-dark: #44593E;
+
+  --color-terracotta: #C97D3F;  /* accent: confidence scores, best-model badge, highlights */
+  --color-terracotta-light: #E0A06A;
+  --color-terracotta-dark: #A4632E;
+
+  --color-soil: #8B6F47;        /* secondary text, borders, dividers */
+  --color-soil-light: #C9B896;
+
+  --color-success: #4A7A4A;
+  --color-warning: #C9963F;
+  --color-danger: #B5483F;
+
+  /* --- Type --- */
+  --font-display: "Source Serif 4", "Lora", Georgia, serif;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", monospace;
+
+  --radius-card: 0.625rem;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-body);
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .dark body {
+    background-color: var(--color-ink);
+    color: var(--color-paper);
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+  }
+
+  /* Visible keyboard focus everywhere - accessibility floor */
+  :focus-visible {
+    outline: 2px solid var(--color-sage);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .card {
+    background-color: var(--color-paper-raised);
+    border: 1px solid color-mix(in srgb, var(--color-soil) 20%, transparent);
+    border-radius: var(--radius-card);
+  }
+
+  .dark .card {
+    background-color: var(--color-ink-raised);
+    border-color: color-mix(in srgb, var(--color-soil) 30%, transparent);
+  }
+
+  .btn-primary {
+    background-color: var(--color-sage);
+    color: var(--color-paper);
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: background-color 0.15s ease;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--color-sage-dark);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .input-field {
+    background-color: var(--color-paper);
+    border: 1px solid color-mix(in srgb, var(--color-soil) 35%, transparent);
+    border-radius: 0.5rem;
+    color: var(--color-ink);
+  }
+
+  .dark .input-field {
+    background-color: var(--color-ink-raised);
+    color: var(--color-paper);
+    border-color: color-mix(in srgb, var(--color-soil) 40%, transparent);
+  }
+
+  .input-field:focus {
+    border-color: var(--color-sage);
+  }
+}
