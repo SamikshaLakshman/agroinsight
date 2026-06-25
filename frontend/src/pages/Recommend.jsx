@@ -8,9 +8,9 @@ import StrataBar from "../components/StrataBar";
 
 const FIELDS = [
   { key: "nitrogen", labelKey: "recommend.nitrogen", min: 0, max: 140 },
-  { key: "phosphorus", labelKey: "recommend.phosphorus", min: 0, max: 145 },
-  { key: "potassium", labelKey: "recommend.potassium", min: 0, max: 205 },
-  { key: "ph", labelKey: "recommend.ph", min: 0, max: 14, step: "0.1" },
+  { key: "phosphorus", labelKey: "recommend.phosphorus", min: 5, max: 145 },
+  { key: "potassium", labelKey: "recommend.potassium", min: 5, max: 205 },
+  { key: "ph", labelKey: "recommend.ph", min: 3.5, max: 10, step: "0.1" },
 ];
 
 function buildExplanationSentence(t, predictedCrop, contributions) {
@@ -110,6 +110,7 @@ export default function Recommend() {
               min={field.min}
               max={field.max}
               step={field.step || "1"}
+              placeholder={`${field.min} - ${field.max}`}
               value={form[field.key]}
               onChange={update(field.key)}
               className="input-field w-full px-3 py-2 font-mono"
@@ -132,7 +133,7 @@ export default function Recommend() {
         <div className="flex flex-col gap-6">
           <div className="card p-4 flex items-center justify-between text-sm">
             <span className="text-[var(--color-soil)]">
-              {result.weather.source === "api"
+              {result.weather.source === "forecast_avg"
                 ? t("recommend.weatherFetched", { city: user.city })
                 : t("recommend.weatherFallback")}
             </span>
