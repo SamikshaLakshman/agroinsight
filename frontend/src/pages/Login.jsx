@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Leaf } from "lucide-react";
+import { Leaf, Sun, Moon } from "lucide-react";
 import { useAuth } from "../context/useAuth";
+import { useTheme } from "../context/useTheme";
 
 export default function Login() {
   const { t } = useTranslation();
   const { login } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -29,7 +31,15 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center px-4 relative">
+      <button
+        onClick={toggleTheme}
+        aria-label="Toggle theme"
+        className="absolute top-4 right-4 p-2 rounded-md hover:bg-[var(--color-soil-light)]/20 text-[var(--color-soil)]"
+      >
+        {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+      </button>
+
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
           <Leaf className="w-9 h-9 text-[var(--color-sage)] mb-2" />
