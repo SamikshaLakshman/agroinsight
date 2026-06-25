@@ -27,7 +27,7 @@ class RecommendationHistory(db.Model):
     temperature = db.Column(db.Float, nullable=False)
     humidity = db.Column(db.Float, nullable=False)
     rainfall = db.Column(db.Float, nullable=False)
-    weather_source = db.Column(db.String(20), nullable=False, default="api")  # 'api' | 'fallback'
+    weather_source = db.Column(db.String(20), nullable=False, default="forecast_avg")  # 'forecast_avg' | 'fallback'
 
     # --- Results ---
     predicted_crop = db.Column(db.String(50), nullable=False)
