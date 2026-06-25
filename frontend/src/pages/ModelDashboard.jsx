@@ -1,13 +1,50 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
+  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
-import { Award } from "lucide-react";
+import { Award, Info } from "lucide-react";
 import { getModelPerformance } from "../api/models";
 
 const MODEL_LABELS = { knn: "KNN", random_forest: "Random Forest", xgboost: "XGBoost" };
+const MODEL_COLORS = {
+  knn: "var(--color-soil)",
+  random_forest: "var(--color-sage)",
+  xgboost: "var(--color-terracotta)",
+};
+
+const METRIC_INFO = [
+  {
+    key: "accuracy",
+    label: "Accuracy",
+    formula: "Correct Predictions / Total Predictions",
+    description: "The proportion of all predictions that the model got right. A high accuracy means the model rarely misclassifies crops, but it can be misleading if some crops appear far more often than others in the dataset.",
+  },
+  {
+    key: "precision",
+    label: "Precision",
+    formula: "True Positives / (True Positives + False Positives)",
+    description: "Of all the times the model predicted a specific crop, how often was it actually that crop? High precision means fewer false alarms — the model doesn't recommend a crop unless it's confident.",
+  },
+  {
+    key: "recall",
+    label: "Recall",
+    formula: "True Positives / (True Positives + False Negatives)",
+    description: "Of all the times a crop was actually the correct answer, how often did the model catch it? High recall means the model rarely misses a crop that should have been recommended.",
+  },
+  {
+    key: "f1_score",
+    label: "F1 Score",
+    formula: "2 × (Precision × Recall) / (Precision + Recall)",
+    description: "The harmonic mean of precision and recall. It balances both metrics — a high F1 means the model is both precise and thorough. This is the single best metric when you care equally about false positives and false negatives.",
+  },
+  {
+    key: "cv_mean_f1",
+    label: "Cross-Validation F1",
+    formula: "Average F1 across k independent train/test splits",
+    description: "The model is trained and tested k times on different slices of the data, and the F1 scores are averaged. This guards against overfitting — a high CV F1 means the model generalises well to unseen soil samples, not just the data it was trained on.",
+  },
+];
 
 export default function ModelDashboard() {
   const { t } = useTranslation();
@@ -19,19 +56,13 @@ export default function ModelDashboard() {
 
   if (!report) return <p className="text-[var(--color-soil)] text-sm">{t("common.loading")}</p>;
 
-  const barData = Object.entries(report.metrics).map(([name, m]) => ({
-    name: MODEL_LABELS[name] || name,
-    accuracy: Math.round(m.accuracy * 100),
-    f1: Math.round(m.f1_score * 100),
-    cv_f1: Math.round(m.cv_mean_f1 * 100),
-  }));
-
-  const radarData = ["accuracy", "precision", "recall", "f1_score", "cv_mean_f1"].map((metric) => {
-    const point = { metric: metric.replace("_", " ") };
+  // One row per metric; each model contributes its own keyed value
+  const comparisonData = METRIC_INFO.map(({ key, label }) => {
+    const row = { metric: label };
     Object.entries(report.metrics).forEach(([name, m]) => {
-      point[MODEL_LABELS[name] || name] = Math.round(m[metric] * 100);
+      row[name] = Math.round(m[key] * 1000) / 10;
     });
-    return point;
+    return row;
   });
 
   const best = report.metrics[report.best_model];
@@ -43,6 +74,7 @@ export default function ModelDashboard() {
         <p className="text-[var(--color-soil)] mt-1">{t("models.subtitle")}</p>
       </div>
 
+      {/* Best model highlight */}
       <div className="card p-6 flex items-center gap-4 bg-[var(--color-terracotta)]/10">
         <div className="p-3 rounded-full bg-[var(--color-terracotta)]/20">
           <Award className="w-6 h-6 text-[var(--color-terracotta)]" />
@@ -61,47 +93,70 @@ export default function ModelDashboard() {
         </div>
       </div>
 
+      {/* Per-model metric cards */}
       <div className="grid sm:grid-cols-3 gap-4">
         {Object.entries(report.metrics).map(([name, m]) => (
-          <div key={name} className="card p-5">
+          <div
+            key={name}
+            className="card p-5"
+            style={{ borderLeft: `4px solid ${MODEL_COLORS[name] || "var(--color-soil)"}` }}
+          >
             <h3 className="font-display font-semibold capitalize mb-3">{MODEL_LABELS[name] || name}</h3>
             <dl className="text-sm flex flex-col gap-1.5 font-mono">
-              <div className="flex justify-between"><dt className="text-[var(--color-soil)] font-sans">{t("models.accuracy")}</dt><dd>{Math.round(m.accuracy * 1000) / 10}%</dd></div>
-              <div className="flex justify-between"><dt className="text-[var(--color-soil)] font-sans">{t("models.precision")}</dt><dd>{Math.round(m.precision * 1000) / 10}%</dd></div>
-              <div className="flex justify-between"><dt className="text-[var(--color-soil)] font-sans">{t("models.recall")}</dt><dd>{Math.round(m.recall * 1000) / 10}%</dd></div>
-              <div className="flex justify-between"><dt className="text-[var(--color-soil)] font-sans">{t("models.f1Score")}</dt><dd>{Math.round(m.f1_score * 1000) / 10}%</dd></div>
-              <div className="flex justify-between"><dt className="text-[var(--color-soil)] font-sans">{t("models.crossValidation")}</dt><dd>{Math.round(m.cv_mean_f1 * 1000) / 10}%</dd></div>
+              {METRIC_INFO.map(({ key, label }) => (
+                <div key={key} className="flex justify-between">
+                  <dt className="text-[var(--color-soil)] font-sans">{label}</dt>
+                  <dd>{Math.round(m[key] * 1000) / 10}%</dd>
+                </div>
+              ))}
             </dl>
           </div>
         ))}
       </div>
 
+      {/* All metrics bar chart — all 5 metrics, all 3 models, each model a different color */}
       <div className="card p-6">
-        <h3 className="font-display font-semibold mb-4">Accuracy & F1 by Model</h3>
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={barData}>
-            <XAxis dataKey="name" stroke="var(--color-soil)" fontSize={12} />
-            <YAxis stroke="var(--color-soil)" fontSize={12} />
-            <Tooltip />
-            <Bar dataKey="accuracy" fill="var(--color-sage)" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="cv_f1" fill="var(--color-terracotta)" radius={[4, 4, 0, 0]} />
+        <h3 className="font-display font-semibold mb-1">All Metrics — Model Comparison</h3>
+        <p className="text-xs text-[var(--color-soil)] mb-4">
+          All five metrics for each model, side by side.
+        </p>
+        <ResponsiveContainer width="100%" height={340}>
+          <BarChart data={comparisonData}>
+            <XAxis dataKey="metric" stroke="var(--color-soil)" fontSize={12} />
+            <YAxis stroke="var(--color-soil)" fontSize={12} domain={[0, 100]} unit="%" />
+            <Tooltip formatter={(value) => `${value}%`} />
+            <Legend
+              formatter={(value) => MODEL_LABELS[value] || value}
+              wrapperStyle={{ fontSize: 12 }}
+            />
+            {Object.keys(report.metrics).map((name) => (
+              <Bar
+                key={name}
+                dataKey={name}
+                name={name}
+                fill={MODEL_COLORS[name] || "var(--color-soil)"}
+                radius={[4, 4, 0, 0]}
+              />
+            ))}
           </BarChart>
         </ResponsiveContainer>
       </div>
 
+      {/* Metric explanations */}
       <div className="card p-6">
-        <h3 className="font-display font-semibold mb-4">Multi-Metric Comparison</h3>
-        <ResponsiveContainer width="100%" height={320}>
-          <RadarChart data={radarData}>
-            <PolarGrid stroke="var(--color-soil-light)" />
-            <PolarAngleAxis dataKey="metric" stroke="var(--color-soil)" fontSize={11} />
-            <PolarRadiusAxis stroke="var(--color-soil-light)" />
-            <Radar name="KNN" dataKey="KNN" stroke="var(--color-soil)" fill="var(--color-soil)" fillOpacity={0.15} />
-            <Radar name="Random Forest" dataKey="Random Forest" stroke="var(--color-sage)" fill="var(--color-sage)" fillOpacity={0.2} />
-            <Radar name="XGBoost" dataKey="XGBoost" stroke="var(--color-terracotta)" fill="var(--color-terracotta)" fillOpacity={0.2} />
-            <Tooltip />
-          </RadarChart>
-        </ResponsiveContainer>
+        <h3 className="font-display font-semibold mb-4 flex items-center gap-2">
+          <Info className="w-5 h-5 text-[var(--color-sage)]" />
+          What Each Metric Means
+        </h3>
+        <div className="flex flex-col gap-5">
+          {METRIC_INFO.map(({ key, label, formula, description }) => (
+            <div key={key}>
+              <h4 className="font-display font-semibold text-sm">{label}</h4>
+              <p className="text-xs font-mono text-[var(--color-sage)] mt-0.5 mb-1">{formula}</p>
+              <p className="text-sm text-[var(--color-soil)] leading-relaxed">{description}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       <p className="text-xs text-[var(--color-soil)] font-mono">
