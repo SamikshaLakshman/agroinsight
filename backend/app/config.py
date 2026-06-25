@@ -47,6 +47,9 @@ class Config:
     # --- OpenWeatherMap ---
     OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY")
     OPENWEATHER_BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
+    # 5-day/3-hour forecast endpoint, used to compute averaged conditions
+    # instead of a single current-moment reading (see weather_service.py).
+    OPENWEATHER_FORECAST_URL = "https://api.openweathermap.org/data/2.5/forecast"
 
     # --- CORS ---
     FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN", "http://localhost:5173")
