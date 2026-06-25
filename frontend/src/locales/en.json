@@ -73,7 +73,10 @@
     "increasedConfidence": "increased confidence",
     "decreasedConfidence": "decreased confidence",
     "explanationIntro": "{{crop}} was recommended mainly because:",
-    "explanationItem": "{{feature}} ({{value}}) {{direction}}"
+    "explanationItem": "{{feature}} ({{value}}) {{direction}}",
+    "shapPositiveEffect": "this value pushed the model towards recommending this crop.",
+    "shapNegativeEffect": "this value slightly reduced confidence, but other factors outweighed it.",
+    "factorsHeading": "Factors that led to this recommendation"
   },
   "planner": {
     "title": "Land Allocation Planner",
@@ -198,5 +201,14 @@
     "edit": "Edit",
     "close": "Close",
     "required": "Required"
+  },
+  "featureDescriptions": {
+    "N": "Nitrogen content in soil — essential for leaf growth and chlorophyll production",
+    "P": "Phosphorus content in soil — critical for root development and energy transfer",
+    "K": "Potassium content in soil — regulates water uptake and disease resistance",
+    "temperature": "Ambient temperature — affects germination rate and growing season length",
+    "humidity": "Air humidity — influences transpiration and fungal disease risk",
+    "ph": "Soil pH — determines nutrient availability and microbial activity",
+    "rainfall": "Precipitation — primary water source affecting irrigation needs"
   }
 }
