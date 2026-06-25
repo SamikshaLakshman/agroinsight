@@ -243,9 +243,7 @@ export default function Recommend() {
                 {t("recommend.whyThisCrop")} — SHAP Explanation
               </h3>
               <p className="text-xs text-[var(--color-soil)] leading-relaxed">
-                SHAP (SHapley Additive exPlanations) uses game theory to calculate each
-                feature's exact contribution to the prediction. Positive values (green)
-                pushed the model towards{" "}
+               
                 <span className="font-semibold capitalize">
                   {t(`crops.${result.predicted_crop}`, { defaultValue: result.predicted_crop })}
                 </span>
@@ -283,10 +281,10 @@ export default function Recommend() {
                 <div>
                   <div className="mb-3">
                     <h4 className="text-xs uppercase tracking-wide text-[var(--color-soil)] mb-1">
-                      LIME Cross-Check
+                      LIME Explaination
                     </h4>
                     <p className="text-xs text-[var(--color-soil)]">
-                      LIME perturbs the input and fits a local linear model to verify SHAP's findings.
+            
                     </p>
                   </div>
 
