@@ -247,7 +247,7 @@ export default function Recommend() {
                 <span className="font-semibold capitalize">
                   {t(`crops.${result.predicted_crop}`, { defaultValue: result.predicted_crop })}
                 </span>
-                ; negative values (red) pulled away from it. Longer bars mean stronger influence.
+               
               </p>
             </div>
 
