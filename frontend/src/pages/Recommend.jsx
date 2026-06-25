@@ -13,20 +13,16 @@ const FIELDS = [
   { key: "ph", labelKey: "recommend.ph", min: 3.5, max: 10, step: "0.1" },
 ];
 
-const FEATURE_DESCRIPTIONS = {
-  N: "Nitrogen content in soil — essential for leaf growth and chlorophyll production",
-  P: "Phosphorus content in soil — critical for root development and energy transfer",
-  K: "Potassium content in soil — regulates water uptake and disease resistance",
-  temperature: "Ambient temperature — affects germination rate and growing season length",
-  humidity: "Air humidity — influences transpiration and fungal disease risk",
-  ph: "Soil pH — determines nutrient availability and microbial activity",
-  rainfall: "Precipitation — primary water source affecting irrigation needs",
-};
-
-function ShapBar({ contribution, maxAbsShap }) {
+function ShapBar({ contribution, maxAbsShap, t }) {
   const absVal = Math.abs(contribution.shap_value);
   const barWidth = maxAbsShap > 0 ? (absVal / maxAbsShap) * 100 : 0;
   const isPositive = contribution.shap_value > 0;
+
+  const featureLabel = t(`features.${contribution.feature}`, { defaultValue: contribution.feature_label });
+  const featureDescription = t(`featureDescriptions.${contribution.feature}`, { defaultValue: "" });
+  const effectText = t(
+    isPositive ? "recommend.shapPositiveEffect" : "recommend.shapNegativeEffect"
+  );
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -37,7 +33,7 @@ function ShapBar({ contribution, maxAbsShap }) {
           ) : (
             <TrendingDown className="w-3.5 h-3.5 text-[var(--color-danger)]" />
           )}
-          <span className="text-sm font-semibold">{contribution.feature_label}</span>
+          <span className="text-sm font-semibold">{featureLabel}</span>
           <span className="text-xs font-mono text-[var(--color-soil)]">= {contribution.value}</span>
         </div>
         <span
@@ -63,11 +59,9 @@ function ShapBar({ contribution, maxAbsShap }) {
       </div>
 
       <p className="text-xs text-[var(--color-soil)] leading-relaxed">
-        {FEATURE_DESCRIPTIONS[contribution.feature] || ""}
-        {" — "}
-        {isPositive
-          ? "this value pushed the model towards recommending this crop."
-          : "this value slightly reduced confidence, but other factors outweighed it."}
+        {featureDescription}
+        {featureDescription ? " — " : ""}
+        {effectText}
       </p>
     </div>
   );
@@ -185,7 +179,7 @@ export default function Recommend() {
               <span className="text-[var(--color-soil)]">
                 {result.weather?.source === "fallback"
                   ? t("recommend.weatherFallback")
-                  : `Live weather for ${user.city} (${result.weather?.forecast_days || 5}-day avg)`}
+                  : t("recommend.weatherFetched", { city: user.city })}
               </span>
 
               <div className="flex items-center gap-4 font-mono">
@@ -236,23 +230,16 @@ export default function Recommend() {
             </p>
           </div>
 
-          {/* SHAP Explanation — the novelty section */}
+          {/* SHAP Explanation */}
           <div className="card p-6">
             <div className="mb-5">
               <h3 className="font-display font-semibold text-lg mb-1">
                 {t("recommend.whyThisCrop")} — SHAP Explanation
               </h3>
-              <p className="text-xs text-[var(--color-soil)] leading-relaxed">
-               
-                <span className="font-semibold capitalize">
-                  {t(`crops.${result.predicted_crop}`, { defaultValue: result.predicted_crop })}
-                </span>
-               
-              </p>
             </div>
 
             <h4 className="text-xs uppercase tracking-wide text-[var(--color-soil)] mb-4">
-              Factors that led to this recommendation
+              {t("recommend.factorsHeading")}
             </h4>
 
             <div className="flex flex-col gap-5">
@@ -261,6 +248,7 @@ export default function Recommend() {
                   key={c.feature}
                   contribution={c}
                   maxAbsShap={maxAbsShap}
+                  t={t}
                 />
               ))}
             </div>
@@ -279,15 +267,6 @@ export default function Recommend() {
                 </button>
               ) : (
                 <div>
-                  <div className="mb-3">
-                    <h4 className="text-xs uppercase tracking-wide text-[var(--color-soil)] mb-1">
-                      LIME Explaination
-                    </h4>
-                    <p className="text-xs text-[var(--color-soil)]">
-            
-                    </p>
-                  </div>
-
                   <ul className="text-sm flex flex-col gap-1 font-mono">
                     {limeResult.explanation.map((item, idx) => (
                       <li key={idx} className="flex justify-between">
