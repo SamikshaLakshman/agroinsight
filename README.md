@@ -1,4 +1,4 @@
-# AgroInsight — AI-Powered Smart Crop Recommendation System
+# AgroInsight - AI-Powered Smart Crop Recommendation System
 
 Full-stack platform: Flask + MySQL backend with a trained ML pipeline
 (KNN / Random Forest / XGBoost + SHAP/LIME explainability), and a React +
