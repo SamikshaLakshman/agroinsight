@@ -122,20 +122,17 @@ def fetch_weather_by_city(city: str) -> dict:
         avg_temp = sum(temps) / len(temps)
         avg_humidity = sum(humidities) / len(humidities)
 
-        # The forecast covers ~5 days. Scale to monthly estimate:
-        # total_precip is across 5 days of 3h intervals, so monthly = total * (30/5)
+       # Report actual total precipitation across the forecast period
+        
         forecast_days = len(points) * 3 / 24  # actual days covered
-        if forecast_days > 0:
-            monthly_rainfall = total_precip_mm * (30 / forecast_days)
-        else:
-            monthly_rainfall = total_precip_mm
 
         return {
             "temperature": round(avg_temp, 2),
             "humidity": round(avg_humidity, 2),
-            "rainfall": round(monthly_rainfall, 2),
-            "source": "forecast_avg",
-            "forecast_points_used": len(points) + 1,  # +1 for current
+            "rainfall": round(total_precip_mm, 2),
+            "source": "live_avg",
+            "forecast_days": round(forecast_days, 1),
+            "forecast_points_used": len(points) + 1,
         }
 
     except (requests.RequestException, ValueError, KeyError) as exc:
