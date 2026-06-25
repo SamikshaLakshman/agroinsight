@@ -53,12 +53,17 @@ export default function Recommend() {
     setIsSubmitting(true);
     try {
       const data = await getRecommendation({
-        nitrogen: parseFloat(form.nitrogen),
-        phosphorus: parseFloat(form.phosphorus),
-        potassium: parseFloat(form.potassium),
-        ph: parseFloat(form.ph),
-      });
-      setResult(data);
+  nitrogen: parseFloat(form.nitrogen),
+  phosphorus: parseFloat(form.phosphorus),
+  potassium: parseFloat(form.potassium),
+  ph: parseFloat(form.ph),
+});
+
+console.log("FULL RESPONSE:", data);
+console.log("WEATHER:", data.weather);
+console.log("WEATHER SOURCE:", data.weather?.source);
+
+setResult(data);
     } catch (err) {
       setError(err.response?.data?.error || t("common.error"));
     } finally {
