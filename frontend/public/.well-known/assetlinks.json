@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.agroinsight_liard.twa",
+        "sha256_cert_fingerprints": ["BE:DB:2A:7A:DB:6C:9C:1C:86:8C:DD:E8:6F:4E:49:1F:42:CF:18:E6:3F:F6:42:5C:23:BB:90:60:D7:3E:E5:4A"]
+      }
+    }]
