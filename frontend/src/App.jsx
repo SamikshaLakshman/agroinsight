@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
-import { ThemeProvider } from "./context/ThemeContext";
+import { ThemeProvider } from "./context/ThemeContext"; 
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 
