@@ -13,10 +13,13 @@ import requests
 from flask import current_app
 
 logger = logging.getLogger(__name__)
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+    logger.addHandler(_handler)
+    logger.setLevel(logging.WARNING)
+    logger.propagate = True
 
-# Fallback values approximate average growing-season conditions for Indian
-# agricultural regions. Used when the live API call cannot complete, and
-# also as the rainfall figure when the API has no active-rain reading.
 FALLBACK_WEATHER = {
     "temperature": 25.0,
     "humidity": 70.0,
@@ -25,30 +28,6 @@ FALLBACK_WEATHER = {
 
 
 def fetch_weather_by_city(city: str) -> dict:
-    """
-    Returns a dict: { temperature, humidity, rainfall, source }
-    source is 'forecast_avg' on success, 'fallback' if anything goes wrong.
-
-    The crop model was trained on seasonal/expected conditions (mean
-    temperature, mean humidity, total rainfall over a growing period), not
-    on a single instant-in-time reading. OpenWeatherMap's free /weather
-    endpoint returns only "right now," which is noisy and, for rainfall,
-    almost always reports nothing (the 'rain' key is only present while it
-    is actively raining at the exact moment of the request).
-
-    Instead we call the free 5-day/3-hour forecast endpoint (40 data points
-    spanning the next 5 days) and average across all of them:
-      - temperature, humidity: mean across all 40 points
-      - rainfall: mean per-3h rainfall scaled up to a representative
-        monthly total (mean_per_interval * 8 intervals/day * 30 days),
-        which lines up with the dataset's rainfall units (mm over a
-        season/month) far better than a single "is it raining now" reading.
-
-    True 30-day historical climate normals require a paid OpenWeatherMap
-    plan (Statistical Weather Data / History API). This forecast-average
-    approach is the closest free-tier equivalent and is far more stable
-    than a single snapshot.
-    """
     api_key = current_app.config.get("OPENWEATHER_API_KEY")
     base_url = current_app.config.get("OPENWEATHER_FORECAST_URL") or (
         "https://api.openweathermap.org/data/2.5/forecast"
@@ -56,7 +35,7 @@ def fetch_weather_by_city(city: str) -> dict:
 
     if not api_key or api_key == "your_openweathermap_api_key_here":
         logger.warning("OpenWeather API key not configured; using fallback weather values.")
-        return {**FALLBACK_WEATHER, "source": "fallback"}
+        return {**FALLBACK_WEATHER, "source": "fallback", "fallback_reason": "api_key_not_configured"}
 
     try:
         response = requests.get(
@@ -80,10 +59,6 @@ def fetch_weather_by_city(city: str) -> dict:
                 temps.append(float(temp))
             if humidity is not None:
                 humidities.append(float(humidity))
-            # rain/snow are absent on dry intervals, which correctly means 0mm
-            # for that 3h slot (unlike the "current weather" endpoint, the
-            # forecast list as a whole covers wet AND dry intervals, so
-            # averaging across it gives a genuine expected-rainfall signal).
             rain_block = point.get("rain") or {}
             snow_block = point.get("snow") or {}
             interval_precip = float(rain_block.get("3h", 0.0)) + float(snow_block.get("3h", 0.0))
@@ -94,10 +69,6 @@ def fetch_weather_by_city(city: str) -> dict:
 
         avg_temp = sum(temps) / len(temps)
         avg_humidity = sum(humidities) / len(humidities)
-
-        # 8 three-hour intervals/day; project the observed 5-day average
-        # daily rainfall out to a representative ~30-day (monthly) total,
-        # matching the scale of the dataset's rainfall feature.
         avg_rain_per_interval = sum(rain_per_interval) / len(rain_per_interval)
         monthly_rainfall = avg_rain_per_interval * 8 * 30
 
@@ -111,4 +82,4 @@ def fetch_weather_by_city(city: str) -> dict:
 
     except (requests.RequestException, ValueError, KeyError) as exc:
         logger.warning(f"Weather fetch failed for city='{city}': {exc}. Using fallback values.")
-        return {**FALLBACK_WEATHER, "source": "fallback"}
+        return {**FALLBACK_WEATHER, "source": "fallback", "fallback_reason": str(exc)}
