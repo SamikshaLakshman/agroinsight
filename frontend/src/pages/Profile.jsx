@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { CheckCircle, AlertCircle } from "lucide-react";
 import { useAuth } from "../context/useAuth";
 import * as profileApi from "../api/profile";
+import apiClient from "../api/client";
 
 export default function Profile() {
   const { t, i18n } = useTranslation();
@@ -22,6 +24,58 @@ export default function Profile() {
   const [error, setError] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // City validation state
+  const [cityMatches, setCityMatches] = useState([]);
+  const [cityValidated, setCityValidated] = useState(!!user?.city);
+  const [cityChecking, setCityChecking] = useState(false);
+
+  // Debounced city validation
+  const validateCity = useCallback(async (cityValue) => {
+    if (!cityValue || cityValue.length < 2) {
+      setCityMatches([]);
+      setCityValidated(false);
+      return;
+    }
+    setCityChecking(true);
+    try {
+      const { data } = await apiClient.get("/profile/validate-city", {
+        params: { city: cityValue },
+      });
+      setCityMatches(data.matches || []);
+      // Auto-validate if the typed value matches the top result
+      const topMatch = data.matches?.[0];
+      if (topMatch && topMatch.city.toLowerCase() === cityValue.toLowerCase()) {
+        setCityValidated(true);
+      } else {
+        setCityValidated(false);
+      }
+    } catch {
+      setCityMatches([]);
+      setCityValidated(false);
+    } finally {
+      setCityChecking(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (form.city && form.city !== user?.city) {
+        validateCity(form.city);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [form.city, validateCity, user?.city]);
+
+  const selectCity = (match) => {
+    setForm((f) => ({
+      ...f,
+      city: match.city,
+      state: match.state || f.state,
+    }));
+    setCityValidated(true);
+    setCityMatches([]);
+  };
+
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -32,6 +86,7 @@ export default function Profile() {
       if (updated.preferred_language !== i18n.language) {
         i18n.changeLanguage(updated.preferred_language);
       }
+      setCityValidated(true);
       setProfileStatus(t("profile.profileUpdated"));
     } catch (err) {
       setError(err.response?.data?.error || t("common.error"));
@@ -93,20 +148,50 @@ export default function Profile() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-sm font-medium block mb-1">{t("profile.city")}</label>
-            <input
-              value={form.city}
-              onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-              className="input-field w-full px-3 py-2"
-            />
-          </div>
-          <div>
             <label className="text-sm font-medium block mb-1">{t("profile.state")}</label>
             <input
               value={form.state}
               onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
               className="input-field w-full px-3 py-2"
             />
+          </div>
+          <div className="relative">
+            <label className="text-sm font-medium block mb-1">
+              {t("profile.city")}
+              {cityChecking && <span className="text-xs text-[var(--color-soil)] ml-2">checking...</span>}
+              {cityValidated && !cityChecking && form.city && (
+                <CheckCircle className="w-3.5 h-3.5 text-[var(--color-success)] inline ml-1" />
+              )}
+              {!cityValidated && !cityChecking && form.city && form.city.length >= 2 && cityMatches.length === 0 && (
+                <AlertCircle className="w-3.5 h-3.5 text-[var(--color-warning)] inline ml-1" />
+              )}
+            </label>
+            <input
+              value={form.city}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, city: e.target.value }));
+                setCityValidated(false);
+              }}
+              placeholder="Start typing a city name..."
+              className="input-field w-full px-3 py-2"
+            />
+            {/* City suggestions dropdown */}
+            {cityMatches.length > 0 && !cityValidated && (
+              <div className="absolute z-20 top-full left-0 right-0 mt-1 card shadow-lg max-h-40 overflow-y-auto">
+                {cityMatches.map((match, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => selectCity(match)}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--color-sage)]/10 transition-colors"
+                  >
+                    <span className="font-medium">{match.city}</span>
+                    {match.state && <span className="text-[var(--color-soil)]">, {match.state}</span>}
+                    {match.country && <span className="text-[var(--color-soil)]"> ({match.country})</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
