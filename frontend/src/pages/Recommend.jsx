@@ -142,22 +142,18 @@ setResult(data);
 
   <div className="flex items-center gap-4 font-mono">
     <span className="flex items-center gap-1">
-      <Thermometer className="w-4 h-4" />
-      {result.weather?.temperature ?? "--"}°C
+      <Thermometer className="w-4 h-4" /> {result.weather?.temperature ?? "--"}°C
     </span>
 
     <span className="flex items-center gap-1">
-      <Droplets className="w-4 h-4" />
-      {result.weather?.humidity ?? "--"}%
+      <Droplets className="w-4 h-4" /> {result.weather?.humidity ?? "--"}%
     </span>
 
     <span className="flex items-center gap-1">
-      <CloudRain className="w-4 h-4" />
-      {result.weather?.rainfall ?? "--"} mm
+      <CloudRain className="w-4 h-4" /> {result.weather?.rainfall ?? "--"} mm
     </span>
   </div>
 </div>
-
           <div>
             <h2 className="font-display font-semibold text-lg mb-3">{t("recommend.resultsTitle")}</h2>
             <div className="flex flex-col gap-2">
