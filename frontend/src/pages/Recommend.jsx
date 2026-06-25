@@ -135,82 +135,113 @@ setResult(data);
       </form>
 
       {result && (
-        <div className="card p-4 flex items-center justify-between text-sm">
-  <span className="text-[var(--color-soil)]">
-    {t("recommend.weatherFetched", { city: user.city })}
-  </span>
+  <div className="flex flex-col gap-6">
 
-  <div className="flex items-center gap-4 font-mono">
-    <span className="flex items-center gap-1">
-      <Thermometer className="w-4 h-4" /> {result.weather?.temperature ?? "--"}°C
-    </span>
+    <div className="card p-4 flex items-center justify-between text-sm">
+      <span className="text-[var(--color-soil)]">
+        {t("recommend.weatherFetched", { city: user.city })}
+      </span>
 
-    <span className="flex items-center gap-1">
-      <Droplets className="w-4 h-4" /> {result.weather?.humidity ?? "--"}%
-    </span>
+      <div className="flex items-center gap-4 font-mono">
+        <span className="flex items-center gap-1">
+          <Thermometer className="w-4 h-4" />
+          {result.weather?.temperature ?? "--"}°C
+        </span>
 
-    <span className="flex items-center gap-1">
-      <CloudRain className="w-4 h-4" /> {result.weather?.rainfall ?? "--"} mm
-    </span>
-  </div>
-</div>
-          <div>
-            <h2 className="font-display font-semibold text-lg mb-3">{t("recommend.resultsTitle")}</h2>
-            <div className="flex flex-col gap-2">
-              {result.top5.map((c) => (
-                <StrataBar
-                  key={c.rank}
-                  rank={c.rank}
-                  crop={c.crop}
-                  confidence={c.confidence}
-                  isBest={c.rank === 1}
-                />
-              ))}
-            </div>
-            <p className="text-xs text-[var(--color-soil)] mt-2 font-mono">
-              {t("recommend.modelUsed")}: {result.model_used}
-            </p>
-          </div>
+        <span className="flex items-center gap-1">
+          <Droplets className="w-4 h-4" />
+          {result.weather?.humidity ?? "--"}%
+        </span>
 
-          <div className="card p-5">
-            <h3 className="font-display font-semibold mb-2">{t("recommend.whyThisCrop")}</h3>
-            <p className="text-sm text-[var(--color-ink)] dark:text-[var(--color-paper)]">
-              {buildExplanationSentence(t, result.predicted_crop, result.shap_explanation.contributions)}
-            </p>
+        <span className="flex items-center gap-1">
+          <CloudRain className="w-4 h-4" />
+          {result.weather?.rainfall ?? "--"} mm
+        </span>
+      </div>
+    </div>
 
-            {!limeResult ? (
-              <button
-                onClick={handleViewLime}
-                disabled={isLoadingLime}
-                className="text-sm text-[var(--color-sage)] font-medium mt-3"
-              >
-                {isLoadingLime ? t("common.loading") : t("recommend.viewLime")}
-              </button>
-            ) : (
-              <div className="mt-4 pt-4 border-t border-[var(--color-soil)]/15">
-                <p className="text-xs uppercase tracking-wide text-[var(--color-soil)] mb-2">LIME</p>
-                <ul className="text-sm flex flex-col gap-1 font-mono">
-                  {limeResult.explanation.map((item, idx) => (
-                    <li key={idx} className="flex justify-between">
-                      <span>{item.rule}</span>
-                      <span className={item.weight > 0 ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"}>
-                        {item.weight > 0 ? "+" : ""}{item.weight}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
+    <div>
+      <h2 className="font-display font-semibold text-lg mb-3">
+        {t("recommend.resultsTitle")}
+      </h2>
 
-          <Link
-            to={`/planner?historyId=${result.history_id}`}
-            className="btn-primary py-2.5 text-center"
-          >
-            {t("recommend.createPlan")}
-          </Link>
+      <div className="flex flex-col gap-2">
+        {result.top5.map((c) => (
+          <StrataBar
+            key={c.rank}
+            rank={c.rank}
+            crop={c.crop}
+            confidence={c.confidence}
+            isBest={c.rank === 1}
+          />
+        ))}
+      </div>
+
+      <p className="text-xs text-[var(--color-soil)] mt-2 font-mono">
+        {t("recommend.modelUsed")}: {result.model_used}
+      </p>
+    </div>
+
+    <div className="card p-5">
+      <h3 className="font-display font-semibold mb-2">
+        {t("recommend.whyThisCrop")}
+      </h3>
+
+      <p className="text-sm text-[var(--color-ink)] dark:text-[var(--color-paper)]">
+        {buildExplanationSentence(
+          t,
+          result.predicted_crop,
+          result.shap_explanation.contributions
+        )}
+      </p>
+
+      {!limeResult ? (
+        <button
+          onClick={handleViewLime}
+          disabled={isLoadingLime}
+          className="text-sm text-[var(--color-sage)] font-medium mt-3"
+        >
+          {isLoadingLime
+            ? t("common.loading")
+            : t("recommend.viewLime")}
+        </button>
+      ) : (
+        <div className="mt-4 pt-4 border-t border-[var(--color-soil)]/15">
+          <p className="text-xs uppercase tracking-wide text-[var(--color-soil)] mb-2">
+            LIME
+          </p>
+
+          <ul className="text-sm flex flex-col gap-1 font-mono">
+            {limeResult.explanation.map((item, idx) => (
+              <li key={idx} className="flex justify-between">
+                <span>{item.rule}</span>
+                <span
+                  className={
+                    item.weight > 0
+                      ? "text-[var(--color-success)]"
+                      : "text-[var(--color-danger)]"
+                  }
+                >
+                  {item.weight > 0 ? "+" : ""}
+                  {item.weight}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
+    </div>
+
+    <Link
+      to={`/planner?historyId=${result.history_id}`}
+      className="btn-primary py-2.5 text-center"
+    >
+      {t("recommend.createPlan")}
+    </Link>
+
+     </div>
+  )}
+
     </div>
   );
 }
