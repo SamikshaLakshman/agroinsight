@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { CloudRain, Thermometer, Droplets, Info } from "lucide-react";
+import { CloudRain, Thermometer, Droplets, Info, TrendingUp, TrendingDown } from "lucide-react";
 import { useAuth } from "../context/useAuth";
 import { getRecommendation, getLimeExplanation } from "../api/recommend";
 import StrataBar from "../components/StrataBar";
@@ -13,23 +13,64 @@ const FIELDS = [
   { key: "ph", labelKey: "recommend.ph", min: 3.5, max: 10, step: "0.1" },
 ];
 
-function buildExplanationSentence(t, predictedCrop, contributions) {
-  const cropLabel = t(`crops.${predictedCrop}`, { defaultValue: predictedCrop });
-  const intro = t("recommend.explanationIntro", { crop: cropLabel });
+const FEATURE_DESCRIPTIONS = {
+  N: "Nitrogen content in soil — essential for leaf growth and chlorophyll production",
+  P: "Phosphorus content in soil — critical for root development and energy transfer",
+  K: "Potassium content in soil — regulates water uptake and disease resistance",
+  temperature: "Ambient temperature — affects germination rate and growing season length",
+  humidity: "Air humidity — influences transpiration and fungal disease risk",
+  ph: "Soil pH — determines nutrient availability and microbial activity",
+  rainfall: "Precipitation — primary water source affecting irrigation needs",
+};
 
-  const items = contributions.slice(0, 3).map((c) => {
-    const featureLabel = t(`features.${c.feature}`, { defaultValue: c.feature_label });
-    const direction = t(
-      c.direction === "increased" ? "recommend.increasedConfidence" : "recommend.decreasedConfidence"
-    );
-    return t("recommend.explanationItem", {
-      feature: featureLabel,
-      value: c.value,
-      direction,
-    });
-  });
+function ShapBar({ contribution, maxAbsShap }) {
+  const absVal = Math.abs(contribution.shap_value);
+  const barWidth = maxAbsShap > 0 ? (absVal / maxAbsShap) * 100 : 0;
+  const isPositive = contribution.shap_value > 0;
 
-  return `${intro} ${items.join("; ")}.`;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {isPositive ? (
+            <TrendingUp className="w-3.5 h-3.5 text-[var(--color-success)]" />
+          ) : (
+            <TrendingDown className="w-3.5 h-3.5 text-[var(--color-danger)]" />
+          )}
+          <span className="text-sm font-semibold">{contribution.feature_label}</span>
+          <span className="text-xs font-mono text-[var(--color-soil)]">= {contribution.value}</span>
+        </div>
+        <span
+          className={`text-xs font-mono font-semibold ${
+            isPositive ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"
+          }`}
+        >
+          {isPositive ? "+" : ""}{contribution.shap_value}
+        </span>
+      </div>
+
+      {/* Horizontal bar */}
+      <div className="w-full h-2.5 rounded-full bg-[var(--color-soil)]/10 overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-700 ease-out"
+          style={{
+            width: `${barWidth}%`,
+            backgroundColor: isPositive
+              ? "var(--color-success)"
+              : "var(--color-danger)",
+          }}
+        />
+      </div>
+
+      <p className="text-xs text-[var(--color-soil)] leading-relaxed">
+        {FEATURE_DESCRIPTIONS[contribution.feature] || ""}
+        {" — "}
+        {isPositive
+          ? "this value pushed the model towards recommending this crop."
+          : "this value slightly reduced confidence, but other factors outweighed it."}
+      </p>
+    </div>
+  );
 }
 
 export default function Recommend() {
@@ -91,6 +132,12 @@ export default function Recommend() {
     );
   }
 
+  // Compute max absolute SHAP value for bar scaling
+  const contributions = result?.shap_explanation?.contributions || [];
+  const maxAbsShap = contributions.length > 0
+    ? Math.max(...contributions.map((c) => Math.abs(c.shap_value)))
+    : 1;
+
   return (
     <div className="flex flex-col gap-8 max-w-2xl mx-auto">
       <div>
@@ -132,12 +179,13 @@ export default function Recommend() {
       {result && (
         <div className="flex flex-col gap-6">
 
+          {/* Weather card */}
           <div className="card p-4 flex flex-col gap-2 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-[var(--color-soil)]">
                 {result.weather?.source === "fallback"
                   ? t("recommend.weatherFallback")
-                  : `Live weather for ${user.city} (${result.weather?.forecast_days || 10}-day avg)`}
+                  : `Live weather for ${user.city} (${result.weather?.forecast_days || 5}-day avg)`}
               </span>
 
               <div className="flex items-center gap-4 font-mono">
@@ -165,6 +213,7 @@ export default function Recommend() {
             )}
           </div>
 
+          {/* Top 5 crops */}
           <div>
             <h2 className="font-display font-semibold text-lg mb-3">
               {t("recommend.resultsTitle")}
@@ -187,54 +236,80 @@ export default function Recommend() {
             </p>
           </div>
 
-          <div className="card p-5">
-            <h3 className="font-display font-semibold mb-2">
-              {t("recommend.whyThisCrop")} (SHAP Explanation)
-            </h3>
+          {/* SHAP Explanation — the novelty section */}
+          <div className="card p-6">
+            <div className="mb-5">
+              <h3 className="font-display font-semibold text-lg mb-1">
+                {t("recommend.whyThisCrop")} — SHAP Explanation
+              </h3>
+              <p className="text-xs text-[var(--color-soil)] leading-relaxed">
+                SHAP (SHapley Additive exPlanations) uses game theory to calculate each
+                feature's exact contribution to the prediction. Positive values (green)
+                pushed the model towards{" "}
+                <span className="font-semibold capitalize">
+                  {t(`crops.${result.predicted_crop}`, { defaultValue: result.predicted_crop })}
+                </span>
+                ; negative values (red) pulled away from it. Longer bars mean stronger influence.
+              </p>
+            </div>
 
-            <p className="text-sm text-[var(--color-ink)] dark:text-[var(--color-paper)]">
-              {buildExplanationSentence(
-                t,
-                result.predicted_crop,
-                result.shap_explanation.contributions
+            <h4 className="text-xs uppercase tracking-wide text-[var(--color-soil)] mb-4">
+              Factors that led to this recommendation
+            </h4>
+
+            <div className="flex flex-col gap-5">
+              {contributions.map((c) => (
+                <ShapBar
+                  key={c.feature}
+                  contribution={c}
+                  maxAbsShap={maxAbsShap}
+                />
+              ))}
+            </div>
+
+            {/* LIME section */}
+            <div className="mt-6 pt-5 border-t border-[var(--color-soil)]/15">
+              {!limeResult ? (
+                <button
+                  onClick={handleViewLime}
+                  disabled={isLoadingLime}
+                  className="text-sm text-[var(--color-sage)] font-medium flex items-center gap-1"
+                >
+                  {isLoadingLime
+                    ? t("common.loading")
+                    : t("recommend.viewLime")}
+                </button>
+              ) : (
+                <div>
+                  <div className="mb-3">
+                    <h4 className="text-xs uppercase tracking-wide text-[var(--color-soil)] mb-1">
+                      LIME Cross-Check
+                    </h4>
+                    <p className="text-xs text-[var(--color-soil)]">
+                      LIME perturbs the input and fits a local linear model to verify SHAP's findings.
+                    </p>
+                  </div>
+
+                  <ul className="text-sm flex flex-col gap-1 font-mono">
+                    {limeResult.explanation.map((item, idx) => (
+                      <li key={idx} className="flex justify-between">
+                        <span>{item.rule}</span>
+                        <span
+                          className={
+                            item.weight > 0
+                              ? "text-[var(--color-success)]"
+                              : "text-[var(--color-danger)]"
+                          }
+                        >
+                          {item.weight > 0 ? "+" : ""}
+                          {item.weight}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
-            </p>
-
-            {!limeResult ? (
-              <button
-                onClick={handleViewLime}
-                disabled={isLoadingLime}
-                className="text-sm text-[var(--color-sage)] font-medium mt-3"
-              >
-                {isLoadingLime
-                  ? t("common.loading")
-                  : t("recommend.viewLime")}
-              </button>
-            ) : (
-              <div className="mt-4 pt-4 border-t border-[var(--color-soil)]/15">
-                <p className="text-xs uppercase tracking-wide text-[var(--color-soil)] mb-2">
-                  LIME
-                </p>
-
-                <ul className="text-sm flex flex-col gap-1 font-mono">
-                  {limeResult.explanation.map((item, idx) => (
-                    <li key={idx} className="flex justify-between">
-                      <span>{item.rule}</span>
-                      <span
-                        className={
-                          item.weight > 0
-                            ? "text-[var(--color-success)]"
-                            : "text-[var(--color-danger)]"
-                        }
-                      >
-                        {item.weight > 0 ? "+" : ""}
-                        {item.weight}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            </div>
           </div>
 
         </div>
