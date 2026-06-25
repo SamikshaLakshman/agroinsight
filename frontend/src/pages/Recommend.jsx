@@ -135,25 +135,28 @@ setResult(data);
       </form>
 
       {result && (
-        <div className="flex flex-col gap-6">
-          <div className="card p-4 flex items-center justify-between text-sm">
-            <span className="text-[var(--color-soil)]">
-              {result.weather.source === "fallback"
-  ? t("recommend.weatherFallback")
-  : t("recommend.weatherFetched", { city: user.city })}
-            </span>
-            <div className="flex items-center gap-4 font-mono">
-              <span className="flex items-center gap-1">
-                <Thermometer className="w-4 h-4" /> {result.weather.temperature}°C
-              </span>
-              <span className="flex items-center gap-1">
-                <Droplets className="w-4 h-4" /> {result.weather.humidity}%
-              </span>
-              <span className="flex items-center gap-1">
-                <CloudRain className="w-4 h-4" /> {result.weather.rainfall}mm
-              </span>
-            </div>
-          </div>
+        <div className="card p-4 flex items-center justify-between text-sm">
+  <span className="text-[var(--color-soil)]">
+    {t("recommend.weatherFetched", { city: user.city })}
+  </span>
+
+  <div className="flex items-center gap-4 font-mono">
+    <span className="flex items-center gap-1">
+      <Thermometer className="w-4 h-4" />
+      {result.weather?.temperature ?? "--"}°C
+    </span>
+
+    <span className="flex items-center gap-1">
+      <Droplets className="w-4 h-4" />
+      {result.weather?.humidity ?? "--"}%
+    </span>
+
+    <span className="flex items-center gap-1">
+      <CloudRain className="w-4 h-4" />
+      {result.weather?.rainfall ?? "--"} mm
+    </span>
+  </div>
+</div>
 
           <div>
             <h2 className="font-display font-semibold text-lg mb-3">{t("recommend.resultsTitle")}</h2>
