@@ -133,7 +133,7 @@ export default function Recommend() {
         <div className="flex flex-col gap-6">
           <div className="card p-4 flex items-center justify-between text-sm">
             <span className="text-[var(--color-soil)]">
-              {result.weather.source === "forecast_avg"
+              {result.weather.source === "fallback"
                 ? t("recommend.weatherFetched", { city: user.city })
                 : t("recommend.weatherFallback")}
             </span>
