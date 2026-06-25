@@ -8,7 +8,6 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Recommend from "./pages/Recommend";
-import Planner from "./pages/Planner";
 import History from "./pages/History";
 import Profile from "./pages/Profile";
 import ModelDashboard from "./pages/ModelDashboard";
@@ -27,7 +26,6 @@ export default function App() {
               <Route element={<Layout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/recommend" element={<Recommend />} />
-                <Route path="/planner" element={<Planner />} />
                 <Route path="/history" element={<History />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/models" element={<ModelDashboard />} />
