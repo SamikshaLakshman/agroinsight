@@ -189,7 +189,7 @@ export default function Recommend() {
 
           <div className="card p-5">
             <h3 className="font-display font-semibold mb-2">
-              {t("recommend.whyThisCrop")}
+              {t("recommend.whyThisCrop")} (SHAP Explanation)
             </h3>
 
             <p className="text-sm text-[var(--color-ink)] dark:text-[var(--color-paper)]">
