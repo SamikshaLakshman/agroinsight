@@ -137,7 +137,7 @@ export default function Recommend() {
               <span className="text-[var(--color-soil)]">
                 {result.weather?.source === "fallback"
                   ? t("recommend.weatherFallback")
-                  : t("recommend.weatherFetched", { city: user.city })}
+                  : `Live weather for ${user.city} (${result.weather?.forecast_days || 10}-day avg)`}
               </span>
 
               <div className="flex items-center gap-4 font-mono">
