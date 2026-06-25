@@ -134,8 +134,8 @@ export default function Recommend() {
           <div className="card p-4 flex items-center justify-between text-sm">
             <span className="text-[var(--color-soil)]">
               {result.weather.source === "fallback"
-                ? t("recommend.weatherFetched", { city: user.city })
-                : t("recommend.weatherFallback")}
+  ? t("recommend.weatherFallback")
+  : t("recommend.weatherFetched", { city: user.city })}
             </span>
             <div className="flex items-center gap-4 font-mono">
               <span className="flex items-center gap-1">
