@@ -8,14 +8,16 @@ const SAMPLE_INPUT = {
   ph: 6.5, temperature: 21, humidity: 82, rainfall: 200,
 };
 
-function ComparisonRow({ label, shap, lime, shapWins }) {
+function ComparisonRow({ label, shap, lime }) {
   return (
     <div className="grid grid-cols-3 gap-4 items-center py-3 border-b border-[var(--color-soil)]/10 last:border-0">
       <span className="text-sm font-medium">{label}</span>
-      <span className={`font-mono text-sm text-center ${shapWins ? "font-semibold text-[var(--color-success)]" : ""}`}>
+
+      <span className="font-mono text-sm text-center font-semibold text-[var(--color-success)]">
         {shap}
       </span>
-      <span className={`font-mono text-sm text-center ${!shapWins ? "font-semibold text-[var(--color-success)]" : ""}`}>
+
+      <span className="font-mono text-sm text-center text-[var(--color-ink)] dark:text-[var(--color-paper)]">
         {lime}
       </span>
     </div>
@@ -93,37 +95,31 @@ export default function ResearchDashboard() {
               label="Latency"
               shap={`${result.shap_latency_seconds}s`}
               lime={`${result.lime_latency_seconds}s`}
-              shapWins={result.shap_latency_seconds <= result.lime_latency_seconds}
             />
             <ComparisonRow
               label="Mathematical Consistency"
               shap="Yes — values sum to prediction"
               lime="No — approximation only"
-              shapWins={true}
             />
             <ComparisonRow
               label="Run-to-Run Stability"
               shap="Deterministic"
               lime="Varies (random perturbations)"
-              shapWins={true}
             />
             <ComparisonRow
               label="Model Awareness"
               shap="Model-specific (uses internals)"
               lime="Model-agnostic (black box)"
-              shapWins={true}
             />
             <ComparisonRow
               label="Top Features Identified"
               shap={result.shap_top_features.join(", ")}
               lime={result.lime_top_features.join(", ")}
-              shapWins={false}
             />
             <ComparisonRow
               label="Feature Agreement"
               shap={`${result.feature_agreement_count} / 3`}
               lime={`${result.feature_agreement_count} / 3`}
-              shapWins={false}
             />
           </div>
 
