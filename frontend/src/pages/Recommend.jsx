@@ -195,7 +195,7 @@ export default function Recommend() {
 
                 <span className="flex items-center gap-1">
                   <CloudRain className="w-4 h-4" />
-                  {result.weather?.rainfall ?? "--"} mm
+                  {result.weather?.rainfall ?? "--"} mm/month
                 </span>
               </div>
             </div>
