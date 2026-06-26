@@ -17,7 +17,7 @@ function ComparisonRow({ label, shap, lime }) {
         {shap}
       </span>
 
-      <span className="font-mono text-sm text-center text-[var(--color-ink)] dark:text-[var(--color-paper)]">
+      <span className="font-mono text-sm text-center font-semibold text-[var(--color-ink)] dark:text-[var(--color-paper)]">
         {lime}
       </span>
     </div>
@@ -87,8 +87,8 @@ export default function ResearchDashboard() {
 
             <div className="grid grid-cols-3 gap-4 pb-2 border-b-2 border-[var(--color-soil)]/20 mb-1">
               <span className="text-xs uppercase tracking-wide text-[var(--color-soil)]">Metric</span>
-              <span className="text-xs uppercase tracking-wide text-center text-[var(--color-sage)]">SHAP</span>
-              <span className="text-xs uppercase tracking-wide text-center text-[var(--color-terracotta)]">LIME</span>
+              <span className="text-xs uppercase tracking-wide text-center text-[var(--color-success)]">SHAP</span>
+              <span className="text-xs uppercase tracking-wide text-center text-[var(--color-ink)] dark:text-[var(--color-paper)]">LIME</span>
             </div>
 
             <ComparisonRow
@@ -110,11 +110,6 @@ export default function ResearchDashboard() {
               label="Model Awareness"
               shap="Model-specific (uses internals)"
               lime="Model-agnostic (black box)"
-            />
-            <ComparisonRow
-              label="Top Features Identified"
-              shap={result.shap_top_features.join(", ")}
-              lime={result.lime_top_features.join(", ")}
             />
             <ComparisonRow
               label="Feature Agreement"
@@ -146,54 +141,6 @@ export default function ResearchDashboard() {
                 <XCircle className="w-4 h-4 text-[var(--color-terracotta)] flex-shrink-0 mt-0.5" />
                 <span><strong className="text-[var(--color-ink)] dark:text-[var(--color-paper)]">LIME's trade-off:</strong> LIME is model-agnostic, which is useful when you can't access model internals. But for AgroInsight, we own the models — so LIME's flexibility isn't needed, and its instability is a drawback. We keep LIME available as a secondary cross-check.</span>
               </div>
-            </div>
-          </div>
-
-          {/* Raw metrics grid */}
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="card p-5">
-              <p className="text-xs uppercase tracking-wide text-[var(--color-soil)]">{t("research.shapLatency")}</p>
-              <p className="font-mono text-2xl font-semibold mt-1">{result.shap_latency_seconds}s</p>
-              <p className="text-xs text-[var(--color-soil)] mt-1">Time to compute one SHAP explanation</p>
-            </div>
-            <div className="card p-5">
-              <p className="text-xs uppercase tracking-wide text-[var(--color-soil)]">{t("research.limeLatency")}</p>
-              <p className="font-mono text-2xl font-semibold mt-1">{result.lime_latency_seconds}s</p>
-              <p className="text-xs text-[var(--color-soil)] mt-1">Time to compute one LIME explanation</p>
-            </div>
-            <div className="card p-5">
-              <p className="text-xs uppercase tracking-wide text-[var(--color-soil)]">{t("research.featureAgreement")}</p>
-              <p className="font-mono text-2xl font-semibold mt-1">{result.feature_agreement_count} / 3</p>
-              <p className="text-xs text-[var(--color-soil)] mt-1">How many of the top-3 features both methods agree on</p>
-            </div>
-            <div className="card p-5">
-              <p className="text-xs uppercase tracking-wide text-[var(--color-soil)]">{t("research.consistencyScore")}</p>
-              <p className="font-mono text-2xl font-semibold mt-1">{result.consistency_score}</p>
-              <p className="text-xs text-[var(--color-soil)] mt-1">Agreement ratio (1.0 = perfect agreement)</p>
-            </div>
-          </div>
-
-          {/* Top features side by side */}
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="card p-5">
-              <h3 className="font-display font-semibold mb-2">SHAP Top Features</h3>
-              <ul className="flex flex-wrap gap-2">
-                {result.shap_top_features.map((f) => (
-                  <li key={f} className="text-xs font-mono px-2 py-1 rounded-md bg-[var(--color-sage)]/15 text-[var(--color-sage)]">
-                    {f}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="card p-5">
-              <h3 className="font-display font-semibold mb-2">LIME Top Features</h3>
-              <ul className="flex flex-wrap gap-2">
-                {result.lime_top_features.map((f) => (
-                  <li key={f} className="text-xs font-mono px-2 py-1 rounded-md bg-[var(--color-terracotta)]/15 text-[var(--color-terracotta)]">
-                    {f}
-                  </li>
-                ))}
-              </ul>
             </div>
           </div>
         </>
