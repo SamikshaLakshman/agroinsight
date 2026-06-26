@@ -162,7 +162,13 @@ def fetch_weather_by_city(city: str) -> dict:
         # ------------------------------------------------------------------ #
         # Step 3 – Climatological monthly rainfall from Open-Meteo           #
         # ------------------------------------------------------------------ #
-        rainfall_mm = _get_climate_normal_rainfall(lat, lon, current_month)
+        try:
+            rainfall_mm = _get_climate_normal_rainfall(lat, lon, current_month)
+            rainfall_source = "open_meteo_climate_normal"
+        except Exception as meteo_exc:
+            logger.warning(f"Open-Meteo climate fetch failed: {meteo_exc}. Falling back to scaled forecast.")
+            rainfall_mm = 100.0
+            rainfall_source = "fallback"
 
         return {
             "temperature": round(avg_temp, 2),
