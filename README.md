@@ -193,7 +193,6 @@ Three supervised machine learning models were trained and evaluated using the cr
 
 Based on the evaluation, Random Forest was selected as the production model and is used by the recommendation service for crop prediction.
 
-## Features
 
 ## Features
 
