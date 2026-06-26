@@ -56,54 +56,62 @@ def _geocode_city(city: str, api_key: str) -> tuple:
 
 def _get_climate_normal_rainfall(lat: float, lon: float, month: int) -> float:
     """
-    Fetch the 30-year (1991-2020) average monthly precipitation for a
-    lat/lon from the Open-Meteo Climate API.
-
-    Open-Meteo returns one value per month for the date range supplied.
-    We request exactly one month's worth of the reference period so the
-    response contains a single aggregated value.
-
-    API docs: https://open-meteo.com/en/docs/climate-api
-    Free tier, no API key required.
+    Fetch 10-year average monthly rainfall using Open-Meteo Historical Weather API.
+    Uses ERA5 daily precipitation_sum, averages across all years for the target month.
     """
     cache_key = (round(lat, 2), round(lon, 2), month)
     if cache_key in _climate_cache:
         return _climate_cache[cache_key]
 
-    # Use a representative year from the 1991-2020 baseline.
-    # We pick 2000 so the month index is unambiguous.
-    start = f"2000-{month:02d}-01"
-    # End on the last day of that month (use next month minus 1 day trick via datetime)
-    if month == 12:
-        end = "2000-12-31"
-    else:
-        end_dt = datetime.date(2000, month + 1, 1) - datetime.timedelta(days=1)
-        end = end_dt.strftime("%Y-%m-%d")
-
     response = requests.get(
-        "https://climate-api.open-meteo.com/v1/climate",
+        "https://archive-api.open-meteo.com/v1/archive",
         params={
             "latitude": lat,
             "longitude": lon,
-            "start_date": start,
-            "end_date": end,
-            "monthly": "precipitation_sum",
-            "models": "EC_Earth3P_HR",
+            "start_date": "2015-01-01",
+            "end_date": "2024-12-31",
+            "daily": "precipitation_sum",
+            "timezone": "auto",
         },
-        timeout=10,
+        timeout=15,
     )
     response.raise_for_status()
     data = response.json()
 
-    monthly_values = data.get("monthly", {}).get("precipitation_sum", [])
-    if not monthly_values:
-        raise ValueError("Open-Meteo returned no precipitation data")
+    dates = data.get("daily", {}).get("time", [])
+    precip = data.get("daily", {}).get("precipitation_sum", [])
 
-    # The API returns a list; take the first (and only) value for our single month
-    rainfall_mm = float(monthly_values[0])
-    _climate_cache[cache_key] = rainfall_mm
-    return rainfall_mm
+    if not dates or not precip:
+        raise ValueError("Open-Meteo archive returned no data")
 
+    # Group daily precipitation by month, average across all years
+    monthly_totals = {}
+    current_month_sum = 0.0
+    current_month_key = None
+
+    for date_str, mm in zip(dates, precip):
+        if mm is None:
+            mm = 0.0
+        y, m, _ = date_str.split("-")
+        key = (int(y), int(m))
+        if key != current_month_key:
+            if current_month_key is not None:
+                mo = current_month_key[1]
+                monthly_totals.setdefault(mo, []).append(current_month_sum)
+            current_month_key = key
+            current_month_sum = float(mm)
+        else:
+            current_month_sum += float(mm)
+
+    if current_month_key is not None:
+        monthly_totals.setdefault(current_month_key[1], []).append(current_month_sum)
+
+    if month not in monthly_totals:
+        raise ValueError(f"No data for month {month}")
+
+    avg_rainfall = sum(monthly_totals[month]) / len(monthly_totals[month])
+    _climate_cache[cache_key] = round(avg_rainfall, 2)
+    return _climate_cache[cache_key]
 
 def fetch_weather_by_city(city: str) -> dict:
     api_key = current_app.config.get("OPENWEATHER_API_KEY")
