@@ -57,7 +57,7 @@
     "ph": "Soil pH",
     "submitButton": "Get Recommendation",
     "analyzing": "Analyzing your soil...",
-    "weatherFetched": "Forecast average for {{city}} (5-day)",
+    "weatherFetched": "Average temperature & humidity forecast with monthly rainfall for {{city}}",
     "weatherFallback": "Using fallback weather averages (live data unavailable)",
     "temperature": "Temperature",
     "humidity": "Humidity",
