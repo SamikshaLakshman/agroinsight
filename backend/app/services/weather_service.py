@@ -1,16 +1,22 @@
 """
 AgroInsight - Weather Service
 ===============================
-Fetches live temperature, humidity, and rainfall for a given city from
-OpenWeatherMap. Uses the previous 10 days of historical data (
+Fetches live temperature and humidity for a given city from OpenWeatherMap.
+Rainfall is sourced from Open-Meteo's 30-year climate normals (1991-2020)
+for the current month — this matches the distribution of the Kaggle crop
+dataset, which uses monthly rainfall as a regional climate characteristic,
+not a live precipitation reading.
 
-Falls back to sensible regional averages if the API call fails (missing
-key, network error, city not found) so the recommendation flow never
-breaks because of an external dependency.
+Strategy:
+  - temperature / humidity  → OpenWeather current + 5-day forecast average (live)
+  - rainfall                → Open-Meteo climate normals API (free, no key needed)
+
+Falls back to sensible regional averages if any API call fails so the
+recommendation flow never breaks because of an external dependency.
 """
 
+import datetime
 import logging
-import time
 
 import requests
 from flask import current_app
@@ -26,8 +32,12 @@ if not logger.handlers:
 FALLBACK_WEATHER = {
     "temperature": 25.0,
     "humidity": 70.0,
-    "rainfall": 100.0,
+    "rainfall": 100.0,   # generic India monthly average
 }
+
+# Simple in-process cache: { (city_lower, month): mm }
+# Avoids re-fetching climate normals for the same city within a session.
+_climate_cache: dict = {}
 
 
 def _geocode_city(city: str, api_key: str) -> tuple:
@@ -44,15 +54,55 @@ def _geocode_city(city: str, api_key: str) -> tuple:
     return results[0]["lat"], results[0]["lon"]
 
 
-def _fetch_history_day(lat: float, lon: float, dt: int, api_key: str) -> dict:
-    """Fetch one day of historical weather via One Call Timemachine (free tier)."""
+def _get_climate_normal_rainfall(lat: float, lon: float, month: int) -> float:
+    """
+    Fetch the 30-year (1991-2020) average monthly precipitation for a
+    lat/lon from the Open-Meteo Climate API.
+
+    Open-Meteo returns one value per month for the date range supplied.
+    We request exactly one month's worth of the reference period so the
+    response contains a single aggregated value.
+
+    API docs: https://open-meteo.com/en/docs/climate-api
+    Free tier, no API key required.
+    """
+    cache_key = (round(lat, 2), round(lon, 2), month)
+    if cache_key in _climate_cache:
+        return _climate_cache[cache_key]
+
+    # Use a representative year from the 1991-2020 baseline.
+    # We pick 2000 so the month index is unambiguous.
+    start = f"2000-{month:02d}-01"
+    # End on the last day of that month (use next month minus 1 day trick via datetime)
+    if month == 12:
+        end = "2000-12-31"
+    else:
+        end_dt = datetime.date(2000, month + 1, 1) - datetime.timedelta(days=1)
+        end = end_dt.strftime("%Y-%m-%d")
+
     response = requests.get(
-        "https://api.openweathermap.org/data/3.0/onecall/timemachine",
-        params={"lat": lat, "lon": lon, "dt": dt, "appid": api_key, "units": "metric"},
-        timeout=8,
+        "https://climate-api.open-meteo.com/v1/climate",
+        params={
+            "latitude": lat,
+            "longitude": lon,
+            "start_date": start,
+            "end_date": end,
+            "monthly": "precipitation_sum",
+            "models": "EC_Earth3P_HR",
+        },
+        timeout=10,
     )
     response.raise_for_status()
-    return response.json()
+    data = response.json()
+
+    monthly_values = data.get("monthly", {}).get("precipitation_sum", [])
+    if not monthly_values:
+        raise ValueError("Open-Meteo returned no precipitation data")
+
+    # The API returns a list; take the first (and only) value for our single month
+    rainfall_mm = float(monthly_values[0])
+    _climate_cache[cache_key] = rainfall_mm
+    return rainfall_mm
 
 
 def fetch_weather_by_city(city: str) -> dict:
@@ -63,14 +113,16 @@ def fetch_weather_by_city(city: str) -> dict:
         return {**FALLBACK_WEATHER, "source": "fallback", "fallback_reason": "api_key_not_configured"}
 
     try:
-        # --- Strategy: use 5-day/3-hour forecast and current weather ---
-        # The free tier doesn't include historical data via One Call 3.0,
-        # so we combine current conditions with the forecast to get a
-        # representative picture. We average all available data points
-        # and compute rainfall as the actual total precipitation across
-        # the forecast period, scaled to a monthly estimate.
+        current_month = datetime.datetime.now().month
 
-        # Step 1: Get current weather for the city
+        # ------------------------------------------------------------------ #
+        # Step 1 – Geocode city (needed for both OWM forecast + Open-Meteo)  #
+        # ------------------------------------------------------------------ #
+        lat, lon = _geocode_city(city, api_key)
+
+        # ------------------------------------------------------------------ #
+        # Step 2 – Live temperature & humidity from OWM                      #
+        # ------------------------------------------------------------------ #
         current_response = requests.get(
             "https://api.openweathermap.org/data/2.5/weather",
             params={"q": city, "appid": api_key, "units": "metric"},
@@ -79,7 +131,6 @@ def fetch_weather_by_city(city: str) -> dict:
         current_response.raise_for_status()
         current_data = current_response.json()
 
-        # Step 2: Get 5-day forecast
         forecast_response = requests.get(
             "https://api.openweathermap.org/data/2.5/forecast",
             params={"q": city, "appid": api_key, "units": "metric"},
@@ -92,46 +143,34 @@ def fetch_weather_by_city(city: str) -> dict:
         if not points:
             raise ValueError("Forecast API returned no data points")
 
-        # Collect temperature and humidity from all forecast points + current
         temps = [float(current_data["main"]["temp"])]
         humidities = [float(current_data["main"]["humidity"])]
-        total_precip_mm = 0.0  # actual total precipitation across all intervals
-
-        # Current weather rain (last 1h or 3h)
-        current_rain = current_data.get("rain") or {}
-        total_precip_mm += float(current_rain.get("1h", current_rain.get("3h", 0.0)))
 
         for point in points:
             main = point.get("main", {})
-            temp = main.get("temp")
-            humidity = main.get("humidity")
-            if temp is not None:
-                temps.append(float(temp))
-            if humidity is not None:
-                humidities.append(float(humidity))
-
-            # Accumulate actual precipitation per 3h interval
-            rain_block = point.get("rain") or {}
-            snow_block = point.get("snow") or {}
-            total_precip_mm += float(rain_block.get("3h", 0.0))
-            total_precip_mm += float(snow_block.get("3h", 0.0))
+            if main.get("temp") is not None:
+                temps.append(float(main["temp"]))
+            if main.get("humidity") is not None:
+                humidities.append(float(main["humidity"]))
 
         if not temps or not humidities:
-            raise ValueError("Incomplete weather data from API")
+            raise ValueError("Incomplete weather data from OWM")
 
         avg_temp = sum(temps) / len(temps)
         avg_humidity = sum(humidities) / len(humidities)
 
-       # Report actual total precipitation across the forecast period
-        
-        forecast_days = len(points) * 3 / 24  # actual days covered
+        # ------------------------------------------------------------------ #
+        # Step 3 – Climatological monthly rainfall from Open-Meteo           #
+        # ------------------------------------------------------------------ #
+        rainfall_mm = _get_climate_normal_rainfall(lat, lon, current_month)
 
         return {
             "temperature": round(avg_temp, 2),
             "humidity": round(avg_humidity, 2),
-            "rainfall": round(total_precip_mm, 2),
+            "rainfall": round(rainfall_mm, 2),
             "source": "live_avg",
-            "forecast_days": round(forecast_days, 1),
+            "rainfall_source": "open_meteo_climate_normal",
+            "rainfall_month": current_month,
             "forecast_points_used": len(points) + 1,
         }
 
